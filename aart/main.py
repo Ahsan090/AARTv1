@@ -2,6 +2,15 @@ import sys
 import os
 import logging
 
+class Color:
+    RED     = '\033[91m'
+    YELLOW  = '\033[93m'
+    GREEN   = '\033[92m'
+    CYAN    = '\033[96m'
+    BOLD    = '\033[1m'
+    RESET   = '\033[0m'
+
+
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from ingestion.loader import load_js_files
@@ -93,22 +102,29 @@ def print_summary(all_routes, tier, findings, sym_findings):
         rules_str = rules_str[:25] + '...'
 
     width = 60
-    def row(label, value):
+    def row(label, value, raw_value=None):
         value = str(value)
-        padding = width - len(label) - len(value) - 4
-        return f'║  {label}{" " * padding}{value}  ║'
+        display_len = len(raw_value) if raw_value else len(value)
+        padding = width - len(label) - display_len - 4
+        return f'{Color.CYAN}║{Color.RESET}  {label}{" " * padding}{value}  {Color.CYAN}║{Color.RESET}'
 
-    print('\n' + '╔' + '═' * width + '╗')
-    print('║' + '       AART SCAN COMPLETE             '.center(width) + '║')
-    print('╠' + '═' * width + '╣')
+    print('\n' + Color.CYAN + '╔' + '═' * width + '╗' + Color.RESET)
+    print(Color.CYAN + '║' + Color.BOLD + '       AART SCAN COMPLETE'.center(width) + Color.RESET + Color.CYAN + '║' + Color.RESET)
+    print(Color.CYAN + '╠' + '═' * width + '╣' + Color.RESET)
     print(row('Routes analyzed:', len(all_routes)))
     print(row('Complexity tier:', tier))
     print(row('Heuristic findings:', len(findings)))
     print(row('Symbolic findings:', len(sym_findings)))
     print(row('Total findings:', total_findings))
-    print(row('Highest severity:', highest))
+    severity_color = {
+        'CRITICAL': Color.RED,
+        'HIGH':     Color.RED,
+        'MEDIUM':   Color.YELLOW,
+        'NONE':     Color.GREEN
+    }.get(highest, Color.RESET)
+    print(row('Highest severity:', severity_color + highest + Color.RESET, raw_value=highest))
     print(row('Symbolic rules fired:', rules_str))
-    print('╚' + '═' * width + '╝')
+    print(Color.CYAN + '╚' + '═' * width + '╝' + Color.RESET)
 
 
 if __name__ == "__main__":
