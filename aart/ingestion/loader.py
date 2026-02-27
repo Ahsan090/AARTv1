@@ -1,3 +1,8 @@
+# Notes from Ahsan
+# This file is responsible for loading JS files from the repo and extracting routes.
+# It uses esprima to parse JS files and looks for patterns like app.get('/path', middleware, handler).
+# The extracted routes are returned as a list of Route objects.
+
 import os
 
 def load_js_files(repo_path: str) -> dict[str, str]:

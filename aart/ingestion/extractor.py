@@ -1,6 +1,10 @@
+# Notes from Ahsan
+# This file is responsible for extracting routes.
+
 import esprima
 from dataclasses import dataclass, field
 
+# Yey dataclass wali annotation bus iss class ka constructor bana degi, aur humko manually __init__ likhne ki zarurat nahi.
 @dataclass
 class Route:
     method: str          # GET, POST, PUT, DELETE
@@ -10,6 +14,7 @@ class Route:
     source_file: str     # which file it came from
     raw_handler_body: str = ""  # we'll use this in Phase 4
 
+# Yey bus parsing aur route extraction ka code hai, jo esprima ke AST ko walk karta hai. Isme koi complex logic nahi hai, bas patterns ko match karna hai.
 def extract_routes(filepath: str, source: str) -> list[Route]:
     routes = []
     try:
