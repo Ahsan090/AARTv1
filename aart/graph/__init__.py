@@ -1,3 +1,7 @@
+# Notes from Ahsan
+# This is for building a graph representation of the app's routes and middleware.
+# The graph can then be analyzed to find routes that are unprotected or have privilege gaps.
+
 from dataclasses import dataclass, field
 from ingestion.extractor import Route
 

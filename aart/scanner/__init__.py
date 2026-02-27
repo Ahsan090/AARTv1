@@ -1,3 +1,7 @@
+# Notes from Ahsan
+# This is a very basic heuristic scanner that looks for common patterns in route definitions.
+# Its basic pattern checking is based on the presence of certain middleware names that suggest authentication or ownership checks.
+
 from dataclasses import dataclass
 from ingestion.extractor import Route
 

@@ -1,6 +1,12 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from ingestion.loader import load_js_files
 from ingestion.extractor import extract_routes
 from ingestion.complexity import detect_tier
+from ingestion.github_loader import is_github_url, clone_repo
 from scanner import run_heuristic_scanner
 from graph import build_graph
 from symbolic import run_symbolic_engine
@@ -60,8 +66,17 @@ def ingest(repo_path: str):
 
     return all_routes, tier, findings, graph, sym_findings
 
+
 if __name__ == "__main__":
-    import sys, os
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    repo_path = sys.argv[1] if len(sys.argv) > 1 else "."
-    ingest(repo_path)
+    user_input = sys.argv[1] if len(sys.argv) > 1 else "."
+
+    if is_github_url(user_input):
+        # GitHub URL path — clone first, analyze, then clean up
+        repo_path, cleanup = clone_repo(user_input)
+        try:
+            ingest(repo_path)
+        finally:
+            cleanup()  # runs even if ingest() crashes
+    else:
+        # Local path — existing behaviour, nothing changes
+        ingest(user_input)
