@@ -1,5 +1,6 @@
 import sys
 import os
+import logging
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -11,58 +12,60 @@ from scanner import run_heuristic_scanner
 from graph import build_graph
 from symbolic import run_symbolic_engine
 
+# Configure logging — change INFO to DEBUG for more detail, WARNING for less
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger('aart')
+
+
 def ingest(repo_path: str):
-    print(f"[*] Loading JS files from: {repo_path}")
+    logger.info(f"Loading JS files from: {repo_path}")
     files = load_js_files(repo_path)
-    print(f"[*] Found {len(files)} JS files\n")
+    logger.info(f"Found {len(files)} JS files")
 
     all_routes = []
     for filepath, source in files.items():
         routes = extract_routes(filepath, source)
         all_routes.extend(routes)
 
-    print(f"[*] Extracted {len(all_routes)} routes")
+    logger.info(f"Extracted {len(all_routes)} routes")
     for r in all_routes:
-        print(f"    {r.method} {r.path} | middleware: {r.middleware} | handler: {r.handler}")
+        logger.debug(f"  {r.method} {r.path} | middleware: {r.middleware} | handler: {r.handler}")
 
     tier = detect_tier(all_routes)
-    print(f"\n[*] Complexity tier: {tier}")
+    logger.info(f"Complexity tier: {tier}")
 
-    print(f"\n[*] Running heuristic scanner...")
+    logger.info("Running heuristic scanner...")
     findings = run_heuristic_scanner(all_routes)
-    print(f"[*] Found {len(findings)} findings:\n")
+    logger.info(f"Heuristic scanner found {len(findings)} findings")
     for f in findings:
-        print(f"  [{f.severity}] {f.rule}")
-        print(f"  Route: {f.route.method} {f.route.path}")
-        print(f"  {f.plain_english}\n")
+        logger.warning(f"[{f.severity}] {f.rule} — {f.route.method} {f.route.path}")
+        logger.info(f"  {f.plain_english}")
 
-    print(f"\n[*] Building attack surface graph...")
+    logger.info("Building attack surface graph...")
     graph = build_graph(all_routes)
-    graph.summary()
+    logger.info(f"Graph built: {len(graph.nodes)} nodes, {len(graph.edges)} edges")
 
-    print(f"\n[*] Graph analysis:")
     unprotected = graph.find_unprotected_paths()
     if unprotected:
-        print(f"  [!] Unprotected routes:")
         for node in unprotected:
-            print(f"      {node.label}")
+            logger.warning(f"Unprotected route (no middleware): {node.label}")
     else:
-        print(f"  [✓] All routes have at least one middleware")
+        logger.info("All routes have at least one middleware")
 
     gaps = graph.find_privilege_gaps()
-    if gaps:
-        print(f"\n  [!] Privilege gaps detected:")
-        for elevated, normal in gaps:
-            print(f"      '{normal.label}' is less protected than '{elevated.label}'")
+    for elevated, normal in gaps:
+        logger.warning(f"Privilege gap: '{normal.label}' is less protected than '{elevated.label}'")
 
-    print(f"\n[*] Running symbolic engine...")
+    logger.info("Running symbolic engine...")
     sym_findings = run_symbolic_engine(all_routes, files)
-    print(f"[*] Found {len(sym_findings)} symbolic findings:\n")
+    logger.info(f"Symbolic engine found {len(sym_findings)} findings")
     for f in sym_findings:
-        print(f"  [confidence: {f.confidence}] {f.rule}")
-        print(f"  Route: {f.route.method} {f.route.path}")
-        print(f"  Evidence: {f.evidence}")
-        print(f"  {f.plain_english}\n")
+        logger.warning(f"[confidence: {f.confidence}] {f.rule} — {f.route.method} {f.route.path}")
+        logger.info(f"  {f.plain_english}")
 
     return all_routes, tier, findings, graph, sym_findings
 
@@ -71,12 +74,10 @@ if __name__ == "__main__":
     user_input = sys.argv[1] if len(sys.argv) > 1 else "."
 
     if is_github_url(user_input):
-        # GitHub URL path — clone first, analyze, then clean up
         repo_path, cleanup = clone_repo(user_input)
         try:
             ingest(repo_path)
         finally:
-            cleanup()  # runs even if ingest() crashes
+            cleanup()
     else:
-        # Local path — existing behaviour, nothing changes
         ingest(user_input)
