@@ -3,6 +3,7 @@ from ingestion.extractor import extract_routes
 from ingestion.complexity import detect_tier
 from scanner import run_heuristic_scanner
 from graph import build_graph
+from symbolic import run_symbolic_engine
 
 def ingest(repo_path: str):
     print(f"[*] Loading JS files from: {repo_path}")
@@ -36,7 +37,7 @@ def ingest(repo_path: str):
     print(f"\n[*] Graph analysis:")
     unprotected = graph.find_unprotected_paths()
     if unprotected:
-        print(f"  [!] Unprotected routes (no middleware at all):")
+        print(f"  [!] Unprotected routes:")
         for node in unprotected:
             print(f"      {node.label}")
     else:
@@ -46,9 +47,18 @@ def ingest(repo_path: str):
     if gaps:
         print(f"\n  [!] Privilege gaps detected:")
         for elevated, normal in gaps:
-            print(f"      '{normal.label}' is less protected than '{elevated.label}' on the same resource")
+            print(f"      '{normal.label}' is less protected than '{elevated.label}'")
 
-    return all_routes, tier, findings, graph
+    print(f"\n[*] Running symbolic engine...")
+    sym_findings = run_symbolic_engine(all_routes, files)
+    print(f"[*] Found {len(sym_findings)} symbolic findings:\n")
+    for f in sym_findings:
+        print(f"  [confidence: {f.confidence}] {f.rule}")
+        print(f"  Route: {f.route.method} {f.route.path}")
+        print(f"  Evidence: {f.evidence}")
+        print(f"  {f.plain_english}\n")
+
+    return all_routes, tier, findings, graph, sym_findings
 
 if __name__ == "__main__":
     import sys, os

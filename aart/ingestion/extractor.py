@@ -13,7 +13,7 @@ class Route:
 def extract_routes(filepath: str, source: str) -> list[Route]:
     routes = []
     try:
-        tree = esprima.parseScript(source, tolerant=True)
+        tree = esprima.parseScript(source, tolerant=True, range=True, tokens=True)
     except Exception:
         return routes  # skip unparseable files gracefully
 
@@ -51,14 +51,27 @@ def _walk(node, source, filepath, routes):
 
                     # Last arg is the handler
                     handler_arg = args[-1]
-                    handler_name = getattr(handler_arg, 'name', 'anonymous')
+                    if hasattr(handler_arg, 'name') and handler_arg.name:
+                        handler_name = handler_arg.name
+                    elif getattr(handler_arg, 'type', '') in ('ArrowFunctionExpression', 'FunctionExpression'):
+                        handler_name = 'inline'
+                    else:
+                        handler_name = 'anonymous'
+
+                    # Capture inline handler body if it's an arrow/function expression
+                    handler_body = ""
+                    if hasattr(handler_arg, 'body') and handler_arg.body is not None:
+                        # Slice raw source text using the node's range
+                        # esprima needs range=True option for this — we'll use a simpler approach
+                        handler_body = str(handler_arg.body)
 
                     routes.append(Route(
                         method=prop.name.upper(),
                         path=route_path,
                         middleware=middleware,
                         handler=handler_name,
-                        source_file=filepath
+                        source_file=filepath,
+                        raw_handler_body=handler_body
                     ))
 
     # Recurse into child nodes
