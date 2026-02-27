@@ -68,7 +68,47 @@ def ingest(repo_path: str):
         logger.warning(f"[confidence: {f.confidence}] {f.rule} — {f.route.method} {f.route.path}")
         logger.info(f"  {f.plain_english}")
 
+    print_summary(all_routes, tier, findings, sym_findings)
     return all_routes, tier, findings, graph, sym_findings
+
+def print_summary(all_routes, tier, findings, sym_findings):
+    from scanner import Finding
+    from symbolic import SymbolicFinding
+
+    total_findings = len(findings) + len(sym_findings)
+
+    # Determine highest severity across heuristic findings
+    severity_rank = {'CRITICAL': 4, 'HIGH': 3, 'MEDIUM': 2, 'INFO': 1}
+    highest = 'NONE'
+    for f in findings:
+        if severity_rank.get(f.severity, 0) > severity_rank.get(highest, 0):
+            highest = f.severity
+
+    # Collect unique rule names from symbolic findings
+    sym_rules = list({f.rule for f in sym_findings})
+    rules_str = ', '.join(sym_rules) if sym_rules else 'None'
+
+    # Truncate rules string if too long for the box
+    if len(rules_str) > 28:
+        rules_str = rules_str[:25] + '...'
+
+    width = 60
+    def row(label, value):
+        value = str(value)
+        padding = width - len(label) - len(value) - 4
+        return f'║  {label}{" " * padding}{value}  ║'
+
+    print('\n' + '╔' + '═' * width + '╗')
+    print('║' + '       AART SCAN COMPLETE             '.center(width) + '║')
+    print('╠' + '═' * width + '╣')
+    print(row('Routes analyzed:', len(all_routes)))
+    print(row('Complexity tier:', tier))
+    print(row('Heuristic findings:', len(findings)))
+    print(row('Symbolic findings:', len(sym_findings)))
+    print(row('Total findings:', total_findings))
+    print(row('Highest severity:', highest))
+    print(row('Symbolic rules fired:', rules_str))
+    print('╚' + '═' * width + '╝')
 
 
 if __name__ == "__main__":
