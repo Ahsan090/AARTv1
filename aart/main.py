@@ -12,6 +12,7 @@ from scanner import run_heuristic_scanner
 from graph import build_graph
 from symbolic import run_symbolic_engine
 
+# If you ever want to see the debug-level route listings, just change logging.INFO to logging.DEBUG in the basicConfig line.
 # Configure logging — change INFO to DEBUG for more detail, WARNING for less
 logging.basicConfig(
     level=logging.INFO,
